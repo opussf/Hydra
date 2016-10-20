@@ -85,4 +85,9 @@ This drives ```future.php``` to show what is coming up.
 	- A few possible fixes. One would be to copy the files as temp names to the publish path, and then rename it to the content name.
 	- For a higher load system, one might look into generating all possible RSS feeds once content is published.  This is a bigger rewrite.
 
+## Notes
+I never really meant to make this public, so there are some things that are hard coded that should have configuration options.
+The photo in the feed is one of those items.
 
+There are also some things I'm sort of working on here and there.
+This is mostly fun for now.
