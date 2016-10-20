@@ -1,15 +1,25 @@
 # Hydra
 RSS feed system supporting multiple heads.
 
+## History
+A previous version of this system was designed to schedule, and slowly feed episodes of Buffy The Vampire Slayer, and Angel.
+The scheduling was done to put the episodes into the correct order to capture how they should be viewed (with the cross over content).
+
+This worked, but made it tricky to schedule other content into it.
+Thus a rewrite took place to make it support many sources of content that could be controlled.
+
 ## Setup
 Create a place you want to serve content from.
-A path on a web server.
+(A path on a web server.)
+Copy the contents of ```webCode``` to that location.
+Rename ```htaccess``` to ```.htaccess```.
 
 Secure this if you want.
 I use http auth through Apache2 configuration.
 
 Decide how often you want to run the ```postShow.py``` script.
 I run it once an hour at 10 minutes past the hour.
+Set this up in crontab (or some such thing like that).
 
 ```10 * * * * <PATH_TO_HYDRA>/postShow.py -d >> <YOUR_LOG_FILENAME> 2>&1```
 
@@ -58,5 +68,21 @@ For each content file (.m4v, .mp4, or .mp3), there can be an .ifo file.
 The .ifo file is a 2 line text file.
 The first line will be used for the title of the RSS item (defaults to the path/filename).
 The second and more lines will be published in the RSS item description (defaults to a short string).
+
+## Extras
+The posting process, even just a dryrun, will create a file ```future.json```.
+This drives ```future.php``` to show what is coming up.
+
+## Known bugs and issues
+* .ifo files created in the posting area may not get properly removed with their parent content.
+	- They won't do anything, but they will exist.
+	- It is okay to just delete them.
+* There is no option to auto clean content folders after all the posted content is expired.
+	- A content folder with just a text file and a directory should not be taking up too much space
+	- This does actually preserve the cron.txt until you want to remove it.
+* There is no option to not generate the ```future.json``` file.
+* Since this does a copy of the file, and the RSS is created on demand, if the RSS file is served during the copy, it might report an invalid content size.  This would cause iTunes to think the file is invalid.
+	- A few possible fixes. One would be to copy the files as temp names to the publish path, and then rename it to the content name.
+	- For a higher load system, one might look into generating all possible RSS feeds once content is published.  This is a bigger rewrite.
 
 
