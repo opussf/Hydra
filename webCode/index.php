@@ -9,7 +9,7 @@ header("Content-type: application/xml");
 print "<?xml version='1.0' encoding='UTF-8'?>\n";
 print "<?xml-stylesheet title='XSL_formatting' type='text/xsl' href='/includes/rss.xsl'?>\n";
 
-$linkpre = "http://pictures.zz9-za.com/";
+$linkpre = "http://yourDomain.com/";
 $server = explode('/',$_SERVER['PHP_SELF']);
 $serverName = ucfirst($server[1]);
 $linkpre .= $server[1]."/";
