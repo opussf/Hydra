@@ -1,2 +1,3 @@
-ewriteEngine on
-RewriteRule ^(.*[^.php])/$ /shows/index.php?dir=$1 [NC,L]
+RewriteEngine on
+RewriteRule \.php$ - [L]
+RewriteRule ^(.*)/$ /shows/index.php?dir=$1 [NC,L]
