@@ -22,7 +22,7 @@ $dirs = scandir(".");
 $afiles = array();
 
 foreach ($dirs as $dir) {
-	if ($dir[0] != "." and $dir != "images" and $dir != "src" and is_dir($dir)) {
+	if ($dir[0] != "." and $dir != "images" and is_dir($dir)) {
 		if ((isset($sourceDir) and $dir == $sourceDir) or (!isset($sourceDir))) {
 			if ($dh = opendir($dir)) {
 				while (($file = readdir($dh)) != False) {
