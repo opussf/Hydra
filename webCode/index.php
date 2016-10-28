@@ -5,6 +5,8 @@ if ($_GET['dir']) {
 }
 require_once('rss.inc.php');
 
+$defaultDesc = "a show from the past";
+
 header("Content-type: application/xml");
 print "<?xml version='1.0' encoding='UTF-8'?>\n";
 print "<?xml-stylesheet title='XSL_formatting' type='text/xsl' href='/includes/rss.xsl'?>\n";
@@ -77,8 +79,7 @@ foreach ($afiles as $d) {
 		$name = substr($filename,0,$loc);
 	}
 	$ifo = $name.".ifo";
-	$desc = "show of the week";
-	$desc = "a show from the past";
+	$desc = $defaultDesc;
 	$title = $name;
 
 	if (file_exists($ifo)) {
