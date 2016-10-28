@@ -62,7 +62,10 @@ IE ```15-29 10 * * *``` -- If you run it on the quarter hour, this will give it 
 
 ### Supported file types.
 This currently only supports .m4v, .mp4, and .mp3 file extensions.
-Feel free to expand the script to support your types, remember to make sure that RSS will support the new formats.
+Modify ```rss.inc.php``` to add file types you want to support.
+Remember to make sure that RSS will support the new formats.
+
+Note that this does not limit the filetypes posted, it only provides a way of mapping the mime types to file extensions.
 
 ### Support files.
 For each content file (.m4v, .mp4, or .mp3), there can be an .ifo file.
