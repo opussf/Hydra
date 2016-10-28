@@ -27,22 +27,26 @@ Running ```postShow.py``` without the -d runs in dryrun mode.
 Log contents will be created, no changes will be made.
 
 By default, this will auto remove posted files after 13 weeks.
-Either edit the script to change that, or pass the -a, --age parameter when you run it to change it.
+Either edit the script, or pass the -a, --age parameter to change the expiration period.
 
 ## Content
-To post content, create a directory with this structure:
+Content is divided into heads.
+The structure of a head is:
 
 ```
 .
-`-- <folder>
-	|-- cron.txt
-	`-- src
+`-- headfolder
+	|-- src
+	`-- cron.txt
 ```
 
-Put any number of cron patterns in cron.txt.
-If any of them match, the oldest file in src will be copied to <folder>.
+Copy your source content into src.
+Order it with the modification date.
+Older files will be posted first.
 
-Copy the content into the src folder, and order it with modification date.
+```cron.txt``` controls when this head will post content.
+Put any number of cron patterns in cron.txt.
+If any of them match, the oldest file in src will be copied to headfolder.
 
 Note: if you copy files into src/ one at a time, the modification date will reflect your actions.
 
