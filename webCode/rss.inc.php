@@ -2,6 +2,12 @@
 
 $ignore_file_types = array("PHP", "SWP", "PDF", "XSL", "XML", "CSV", "IFO", "PY", "TXT");
 
+$mime_types = array(
+	"mp3"=> "audio/mpeg",
+	"m4v"=> "video/x-m4v",
+	"mp4"=> "video/x-mp4",
+);
+
 function get_filetype($fname) {
   return end(explode('.', $fname));
 }

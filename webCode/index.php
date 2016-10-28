@@ -74,10 +74,13 @@ $itemFormat = False;
 
 foreach ($afiles as $d) {
 	$filename = $d["filename"];
-	$loc = strrpos($filename,".");
-	if ($loc != false) {
-		$name = substr($filename,0,$loc);
-	}
+
+	$fnamea = explode( ".", $filename );
+	$fext = array_pop( $fnamea );   # get the extension, modify the array
+	$mimeType = $mime_types[$fext];
+
+	$name = implode(".", $fnamea );  # basename is everything except the extension
+
 	$ifo = $name.".ifo";
 	$desc = $defaultDesc;
 	$title = $name;
@@ -104,7 +107,7 @@ foreach ($afiles as $d) {
 	print "<pubDate>$pubdate</pubDate>".($itemFormat ? "\n\t" : "");
 	print "<description>$desc</description>".($itemFormat ? "\n\t" : "");
 	print "<guid>$linkpre".$filename."</guid>".($itemFormat ? "\n\t" : "");
-	print "<enclosure url='$linkpre".$filename."' size='".$fsize."' type='video/x-m4v'/>".($itemFormat ? "\n" : "");
+	print "<enclosure url='$linkpre".$filename."' size='".$fsize."' type='".$mimeType."'/>".($itemFormat ? "\n" : "");
 	print "</item>\n";
 }
 
