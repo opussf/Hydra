@@ -22,7 +22,7 @@ import crontab_parser
 import logging
 import json
 
-validTypes = ['m4v','mp4','mp3']
+validTypes = ['m4v','mp4','mp3','aiff']
 
 def postFiles( basePath ):
 	"""This posts files to basePath from basePath/src
