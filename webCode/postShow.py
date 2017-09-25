@@ -11,6 +11,7 @@
 #     * Move the oldest media file from src/ to targetDir
 #     * Move the associated .ifo file as well
 
+
 import os, sys
 import os.path
 import shutil
@@ -20,22 +21,28 @@ from optparse import OptionParser
 import crontab_parser
 import logging
 import json
+import threading
+import Queue
+import timeit
 
-validTypes = ['m4v','mp4','mp3','aiff']
+validTypes = ['m4a','m4v','mp4','mp3','aiff']
 
-class Hydra( object ):
-	"""Hydra object works with a directory and:
-		* Scans the config.txt
-			* crontab
-			* keep length
-			* auto delete
-			* other settings
+movedMessages = []
 
-		* Posts a file(s) if needed
-		* Removes a file(s) if needed
-	"""
-	def __init__( self ):
-		pass
+def copyQueuedFiles():
+	while True:
+		( src, dist ) = copyQueue.get()
+		logger.info( "Processing %s" % ( src, ) )
+		start = timeit.default_timer()
+		if not dryrun:
+			shutil.copy( src, dist )
+			os.remove( src )
+		else:
+			time.sleep( 2.2 )
+		end = timeit.default_timer()
+		movedMessages.append( "Moved%s (in %0.03fs) ---> %s" % 
+				( dryrun and " (dryrun)" or "", end-start, dist ) )
+		copyQueue.task_done()
 
 def postFiles( basePath ):
 	"""This posts files to basePath from basePath/src
@@ -49,7 +56,7 @@ def postFiles( basePath ):
 	allFiles = map(lambda x: [x[0], x[1], os.lstat(os.path.join(srcDir, os.extsep.join(x))).st_mtime], allFiles)
 	allFiles = sorted(allFiles, key=lambda k: k[2]) # sort the files by modtime
 	allFiles = map(lambda x: x[:-1], allFiles) #remove the modtime element
-
+	
 	# files that match the expected extension
 	validFiles = filter(lambda x: x[-1] in validTypes, allFiles)
 	logger.debug("Valid File count: %i" % (len(validFiles),) )
@@ -70,11 +77,8 @@ def postFiles( basePath ):
 		for file in moveFiles:
 			src = os.path.join(srcDir, file)
 			dist = os.path.join(basePath, file)
-			logger.info("Processing %s" % (src,))
-			if not dryrun:
-				shutil.copy( src, dist )
-				os.remove( src )
-				logger.info("Moved ---> %s" % (dist,))
+			logger.info( "Queuing %s" % (src,))
+			copyQueue.put( (src, dist) )
 
 def pruneFiles( basePath ):
 	pruneFiles = os.listdir(basePath)
@@ -94,7 +98,8 @@ def pruneFiles( basePath ):
 	testFiles = filter(lambda x: x[0] in nameFiles, pruneFiles)
 
 	# join the filenames back together
-	testFiles = map(lambda x: os.extsep.join(x), testFiles)
+	testFiles = map(lambda x: os.extsep.join(x), testFiles) 
+	testFiles.sort()
 
 	for f in testFiles:
 		thisfile = os.path.join( basePath, f )
@@ -105,7 +110,7 @@ def pruneFiles( basePath ):
 			try:
 				logger.debug("Delete: %s" % (thisfile,))
 				if not dryrun:
-					logger.info("Deleting: %s" % (f,))
+					logger.info("Deleted <--- %s" % (f,))
 					os.remove(thisfile)
 				else:
 					logger.info("Deleting (dryrun): %s" % (f,))
@@ -172,7 +177,7 @@ def futureFiles( basePath, daysInFuture=30 ):
 			for line in cronLines:
 				line = line.strip()
 				logger.debug( "Parse %s" % ( line, ) )
-
+				
 				cronCheck.set_value(line)
 				nextTime = cronCheck.next_run(baseTime)
 				#if nextTime < baseTime:
@@ -180,11 +185,11 @@ def futureFiles( basePath, daysInFuture=30 ):
 				minTimes.append( nextTime )
 
 			postTime = min( minTimes ) # next post time is the min val of the list
-
+				
 			returnList.append( [fileName, "%s" % ((postTime.strftime("%s"),)), "desc", "%s" % (postTime,)] ) # fix this by finding the file and the desc file
 			baseTime = postTime + datetime.timedelta( hours=1 ) # add an hour to the post time, since it is run once an hour
 
-			logger.debug( "%s (%s) %s" % (postTime, baseTime, fileName) )  # print for debugging
+			logger.debug( "%s (%s) %s" % (postTime, baseTime, fileName) )  # print for debugging 
 
 	return returnList
 
@@ -206,8 +211,6 @@ parser.add_option("", "--next", action="store_true", dest="showNext", default=Fa
 		help="show next posting")
 parser.add_option("-j", "--json", action="store", dest="jsonFile", type="string", default="future.json",
 		help="set the file to dump information about future postings to.")
-parser.add_option("-n", "--new", action="store", dest="newHead", type="string",
-		help="create a new 'head' to post. Creates all the support files.")
 
 (options, args) = parser.parse_args()
 
@@ -229,7 +232,17 @@ logger.info("Starting")
 if dryrun:
 	logger.info("Dryrun engaged (use -d to disable dry run)")
 
+# https://docs.python.org/2/library/queue.html#module-Queue
+
+copyQueue = Queue.Queue()
+logger.debug( "Queue object created." )
+
+copyThread = threading.Thread( target=copyQueuedFiles )
+copyThread.daemon = True  #  Need this???
+copyThread.start()
+
 cutofftime = time.time() - (3600 * 24 * daysback) - 240  # fudge factor
+cutofftime = time.time() - (3600 * 24 * daysback)
 logger.debug("Cutoff Time %s" % time.ctime(cutofftime) )
 
 # init the future dataStructure
@@ -240,6 +253,7 @@ future = {}
 cronCheck = crontab_parser.SimpleCrontabEntry()
 
 for root, dirs, files in os.walk( options.rootDir ):
+	dirs.sort( reverse=False )
 	if dirs == ['src']:  # only process a dir with the 'src' subdir
 		show = os.path.split(root)[-1:][0]
 		logger.info("Checking: %s" % show)
@@ -270,5 +284,11 @@ logger.info( "Writing future data to: %s" % ( jsonFile, ) )
 #pprint.pprint(future)
 
 file( os.path.join( options.rootDir, jsonFile ), "w" ).write( json.dumps( future ) )
+logger.info( "Copy queue size is: %i" % ( copyQueue.qsize(), ) )
+logger.info( "Blocking until copy queue is done" )
+copyQueue.join()
+
+for msg in movedMessages:
+	logger.info( msg )
 
 logger.info("Completed")

@@ -102,9 +102,9 @@ foreach ($afiles as $d) {
 	$filename = implode("/", $f );
 	
 	print "<item>".($itemFormat ? "\n\t" : "");
+	print "<pubDate>$pubdate</pubDate>".($itemFormat ? "\n\t" : "");
 	print "<title>".htmlentities($title)."</title>".($itemFormat ? "\n\t" : "");
 	print "<link>$linkpre".$filename."</link>".($itemFormat ?  "\n\t" : "");
-	print "<pubDate>$pubdate</pubDate>".($itemFormat ? "\n\t" : "");
 	print "<description>$desc</description>".($itemFormat ? "\n\t" : "");
 	print "<guid>$linkpre".$filename."</guid>".($itemFormat ? "\n\t" : "");
 	print "<enclosure url='$linkpre".$filename."' size='".$fsize."' type='".$mimeType."'/>".($itemFormat ? "\n" : "");
