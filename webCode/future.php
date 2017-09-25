@@ -11,7 +11,7 @@ $futureData = json_decode( file_get_contents( $fIn ) );
 
 
 $graphSizes = array( "small" => array( "x" => 1400, "y" => 200 ),
-		"normal" => array( "x" => 1400, "y" => 350 ),
+		"normal" => array( "x" => 1400, "y" => 320 ),
 		"micro" => array( "x" => 305, "y" => 176 ),
 );
 $size = "normal";
@@ -30,6 +30,7 @@ foreach ( $futureData as $show => $showdata ) {
 		$month -= 1;
 		$jsonDate = sprintf("(%s, %s, %s)", $year, $month, $day);
 		$key = date("Y-m-d", $shows[1]);
+		$dateStr = date("D, Y-m-d", $shows[1]);
 	
 		#print($key . "<br/>");
 		if (array_key_exists($key, $data)) {
@@ -37,7 +38,7 @@ foreach ( $futureData as $show => $showdata ) {
 			$data[$key][2] .= "<br/>" . $shows[0];
 		} else {
 			#var_dump( array( 1, $shows[0] ) );
-			$data[$key] = array( 0 => $jsonDate, 1 => 1, 2 => $shows[0] );
+			$data[$key] = array( 0 => $jsonDate, 1 => 1, 2 => $shows[0], 3 => $dateStr );
 		}
 	}
 }
@@ -89,7 +90,7 @@ function drawChart() {
 <?php
 	foreach( $data as $date => $struct ) {
 		print(sprintf("<tr><td>%s</td><td>%s</td></tr>\n",
-				$date, $struct[2]));
+				$struct[3], $struct[2]));
 	}
 		
 ?>

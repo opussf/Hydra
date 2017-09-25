@@ -59,7 +59,7 @@ if ($mostRecent != NULL) {
 	<width>200</width>
 	<height>176</height>
 </image>
-<itunes:image href="<?php print $linkpre . $imageLoc ?>"><?php print $linkpre . $imageLoc ?></itunes:image>
+<itunes:image href="<?php print $linkpre . $imageLoc ?>" />
 <itunes:subtitle>A podcast of old(er) TV shows</itunes:subtitle>
 <itunes:author>zz9-za.com</itunes:author>
 <itunes:summary>Re-runs of older TV shows, published straight to your iTunes</itunes:summary>
@@ -102,9 +102,9 @@ foreach ($afiles as $d) {
 	$filename = implode("/", $f );
 	
 	print "<item>".($itemFormat ? "\n\t" : "");
+	print "<pubDate>$pubdate</pubDate>".($itemFormat ? "\n\t" : "");
 	print "<title>".htmlentities($title)."</title>".($itemFormat ? "\n\t" : "");
 	print "<link>$linkpre".$filename."</link>".($itemFormat ?  "\n\t" : "");
-	print "<pubDate>$pubdate</pubDate>".($itemFormat ? "\n\t" : "");
 	print "<description>$desc</description>".($itemFormat ? "\n\t" : "");
 	print "<guid>$linkpre".$filename."</guid>".($itemFormat ? "\n\t" : "");
 	print "<enclosure url='$linkpre".$filename."' size='".$fsize."' type='".$mimeType."'/>".($itemFormat ? "\n" : "");

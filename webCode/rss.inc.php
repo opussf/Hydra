@@ -3,6 +3,7 @@
 $ignore_file_types = array("PHP", "SWP", "PDF", "XSL", "XML", "CSV", "IFO", "PY", "TXT");
 
 $mime_types = array(
+	"m4a"=> "audio/mp4",
 	"mp3"=> "audio/mpeg",
 	"m4v"=> "video/x-m4v",
 	"mp4"=> "video/x-mp4",
