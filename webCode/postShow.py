@@ -11,7 +11,6 @@
 #     * Move the oldest media file from src/ to targetDir
 #     * Move the associated .ifo file as well
 
-
 import os, sys
 import os.path
 import shutil
@@ -23,6 +22,20 @@ import logging
 import json
 
 validTypes = ['m4v','mp4','mp3','aiff']
+
+class Hydra( object ):
+	"""Hydra object works with a directory and:
+		* Scans the config.txt
+			* crontab
+			* keep length
+			* auto delete
+			* other settings
+
+		* Posts a file(s) if needed
+		* Removes a file(s) if needed
+	"""
+	def __init__( self ):
+		pass
 
 def postFiles( basePath ):
 	"""This posts files to basePath from basePath/src
@@ -36,7 +49,7 @@ def postFiles( basePath ):
 	allFiles = map(lambda x: [x[0], x[1], os.lstat(os.path.join(srcDir, os.extsep.join(x))).st_mtime], allFiles)
 	allFiles = sorted(allFiles, key=lambda k: k[2]) # sort the files by modtime
 	allFiles = map(lambda x: x[:-1], allFiles) #remove the modtime element
-	
+
 	# files that match the expected extension
 	validFiles = filter(lambda x: x[-1] in validTypes, allFiles)
 	logger.debug("Valid File count: %i" % (len(validFiles),) )
@@ -81,7 +94,7 @@ def pruneFiles( basePath ):
 	testFiles = filter(lambda x: x[0] in nameFiles, pruneFiles)
 
 	# join the filenames back together
-	testFiles = map(lambda x: os.extsep.join(x), testFiles) 
+	testFiles = map(lambda x: os.extsep.join(x), testFiles)
 
 	for f in testFiles:
 		thisfile = os.path.join( basePath, f )
@@ -159,7 +172,7 @@ def futureFiles( basePath, daysInFuture=30 ):
 			for line in cronLines:
 				line = line.strip()
 				logger.debug( "Parse %s" % ( line, ) )
-				
+
 				cronCheck.set_value(line)
 				nextTime = cronCheck.next_run(baseTime)
 				#if nextTime < baseTime:
@@ -167,11 +180,11 @@ def futureFiles( basePath, daysInFuture=30 ):
 				minTimes.append( nextTime )
 
 			postTime = min( minTimes ) # next post time is the min val of the list
-				
+
 			returnList.append( [fileName, "%s" % ((postTime.strftime("%s"),)), "desc", "%s" % (postTime,)] ) # fix this by finding the file and the desc file
 			baseTime = postTime + datetime.timedelta( hours=1 ) # add an hour to the post time, since it is run once an hour
 
-			logger.debug( "%s (%s) %s" % (postTime, baseTime, fileName) )  # print for debugging 
+			logger.debug( "%s (%s) %s" % (postTime, baseTime, fileName) )  # print for debugging
 
 	return returnList
 
@@ -193,6 +206,8 @@ parser.add_option("", "--next", action="store_true", dest="showNext", default=Fa
 		help="show next posting")
 parser.add_option("-j", "--json", action="store", dest="jsonFile", type="string", default="future.json",
 		help="set the file to dump information about future postings to.")
+parser.add_option("-n", "--new", action="store", dest="newHead", type="string",
+		help="create a new 'head' to post. Creates all the support files.")
 
 (options, args) = parser.parse_args()
 
@@ -244,7 +259,7 @@ for root, dirs, files in os.walk( options.rootDir ):
 					break
 				else:
 					logger.debug("Next run at: %s" % (cronCheck.next_run(),))
-		
+
 		pruneFiles(root) # Always try to prune files
 		warnFiles(root) # generate any warnings
 		future[show]=futureFiles(root) # add future files to json structure
