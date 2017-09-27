@@ -34,7 +34,8 @@ def copyQueuedFiles():
 		try:
 			( src, dist ) = copyQueue.get( True )
 			logger.info( "Processing %s" % ( src, ) )
-			st = os.statvfs( "." )
+			logger.debug( "Path to check diskfree: %s" % ( os.path.dirname( dist ) ) )
+			st = os.statvfs( os.path.dirname( dist ) )
 			diskFree = st.f_bavail * st.f_frsize
 			fileSize = os.path.getsize( src )
 			logger.info( "Filesize: %i, diskFree: %i" % ( fileSize, diskFree ) )
@@ -51,11 +52,12 @@ def copyQueuedFiles():
 			else:
 				logger.error( "Diskfree: %i < Filesize: %i. Not enough space to post file." %
 						( diskFree, fileSize ) )
-			copyQueue.task_done()
 		except OSError as err:
-			loggeer.error( "OS error: %s" % (err, ) )
+			logger.error( "OS error: %s" % (err, ) )
 		except:
 			pass
+		finally:
+			copyQueue.task_done()
 
 def postFiles( basePath ):
 	"""This posts files to basePath from basePath/src
