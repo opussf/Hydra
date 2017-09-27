@@ -34,15 +34,23 @@ def copyQueuedFiles():
 		try:
 			( src, dist ) = copyQueue.get( True )
 			logger.info( "Processing %s" % ( src, ) )
-			start = timeit.default_timer()
-			if not dryrun:
-				shutil.copy( src, dist )
-				os.remove( src )
+			st = os.statvfs( "." )
+			diskFree = st.f_bavail * st.f_frsize
+			fileSize = os.path.getsize( src )
+			logger.info( "Filesize: %i, diskFree: %i" % ( fileSize, diskFree ) )
+			if diskFree > fileSize:
+				start = timeit.default_timer()
+				if not dryrun:
+					shutil.copy( src, dist )
+					os.remove( src )
+				else:
+					time.sleep( 2.2 )
+				end = timeit.default_timer()
+				movedMessages.append( "Moved%s (in %00.03fs) ---> %s" % 
+						( dryrun and " (dryrun)" or "", end-start, dist ) )
 			else:
-				time.sleep( 2.2 )
-			end = timeit.default_timer()
-			movedMessages.append( "Moved%s (in %00.03fs) ---> %s" % 
-					( dryrun and " (dryrun)" or "", end-start, dist ) )
+				logger.error( "Diskfree: %i < Filesize: %i. Not enough space to post file." %
+						( diskFree, fileSize ) )
 			copyQueue.task_done()
 		except OSError as err:
 			loggeer.error( "OS error: %s" % (err, ) )
@@ -247,7 +255,7 @@ copyThread.daemon = True  #  Need this???
 copyThread.start()
 
 cutofftime = time.time() - (3600 * 24 * daysback) - 240  # fudge factor
-cutofftime = time.time() - (3600 * 24 * daysback)
+cutofftime = time.time() - (3600 * 24 * daysback) + 240
 logger.debug("Cutoff Time %s" % time.ctime(cutofftime) )
 
 # init the future dataStructure
