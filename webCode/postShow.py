@@ -31,18 +31,23 @@ movedMessages = []
 
 def copyQueuedFiles():
 	while True:
-		( src, dist ) = copyQueue.get()
-		logger.info( "Processing %s" % ( src, ) )
-		start = timeit.default_timer()
-		if not dryrun:
-			shutil.copy( src, dist )
-			os.remove( src )
-		else:
-			time.sleep( 2.2 )
-		end = timeit.default_timer()
-		movedMessages.append( "Moved%s (in %0.03fs) ---> %s" % 
-				( dryrun and " (dryrun)" or "", end-start, dist ) )
-		copyQueue.task_done()
+		try:
+			( src, dist ) = copyQueue.get( True )
+			logger.info( "Processing %s" % ( src, ) )
+			start = timeit.default_timer()
+			if not dryrun:
+				shutil.copy( src, dist )
+				os.remove( src )
+			else:
+				time.sleep( 2.2 )
+			end = timeit.default_timer()
+			movedMessages.append( "Moved%s (in %00.03fs) ---> %s" % 
+					( dryrun and " (dryrun)" or "", end-start, dist ) )
+			copyQueue.task_done()
+		except OSError as err:
+			loggeer.error( "OS error: %s" % (err, ) )
+		except:
+			pass
 
 def postFiles( basePath ):
 	"""This posts files to basePath from basePath/src
