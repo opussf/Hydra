@@ -30,34 +30,41 @@ validTypes = ['m4a','m4v','mp4','mp3','aiff']
 movedMessages = []
 
 def copyQueuedFiles():
-	while True:
-		try:
-			( src, dist ) = copyQueue.get( True )
-			logger.info( "Processing %s" % ( src, ) )
-			logger.debug( "Path to check diskfree: %s" % ( os.path.dirname( dist ) ) )
-			st = os.statvfs( os.path.dirname( dist ) )
-			diskFree = st.f_bavail * st.f_frsize
-			fileSize = os.path.getsize( src )
-			logger.info( "Filesize: %i, diskFree: %i" % ( fileSize, diskFree ) )
-			if diskFree > fileSize:
-				start = timeit.default_timer()
-				if not dryrun:
+	logger.debug( "Starting worker." )
+	done = False
+	while not done:
+		( src, dist ) = copyQueue.get( True )
+		if len( src ) == 0:
+			logger.debug( "Enpty src found.  Time to end thread." )
+			done = True
+			copyQueue.task_done()
+			break
+
+		logger.info( "Processing: %s" % ( src, ) )
+		logger.debug( "Path to check diskfree: %s" % ( os.path.dirname( dist ) ) )
+		st = os.statvfs( os.path.dirname( dist ) )
+		diskFree = st.f_bavail * st.f_frsize
+		fileSize = os.path.getsize( src )
+		logger.debug( "Filesize: %i, diskFree: %i" % ( fileSize, diskFree ) )
+		logger.info( "File is %0.02f%% of the diskFree." % ( (fileSize * 1.0 / diskFree ) * 100, ) )
+		if diskFree > fileSize:
+			start = timeit.default_timer()
+			if not dryrun:
+				try:
 					shutil.copy( src, dist )
 					os.remove( src )
-				else:
-					time.sleep( 2.2 )
-				end = timeit.default_timer()
-				movedMessages.append( "Moved%s (in %00.03fs) ---> %s" % 
-						( dryrun and " (dryrun)" or "", end-start, dist ) )
+				except OSError as err:
+					logger.error( "OS error: %s" % ( err, ) )
 			else:
-				logger.error( "Diskfree: %i < Filesize: %i. Not enough space to post file." %
-						( diskFree, fileSize ) )
-		except OSError as err:
-			logger.error( "OS error: %s" % (err, ) )
-		except:
-			pass
-		finally:
-			copyQueue.task_done()
+				time.sleep( 2.2 )
+			end = timeit.default_timer()
+			movedMessages.append( "Moved%s (in %00.03fs) ---> %s" % 
+					( dryrun and " (dryrun)" or "", end-start, dist ) )
+		else:
+			logger.error( "Diskfree: %i < Filesize: %i. Not enough space to post file." %
+					( diskFree, fileSize ) )
+		copyQueue.task_done()
+	logger.debug( "Ending worker." )
 
 def postFiles( basePath ):
 	"""This posts files to basePath from basePath/src
@@ -83,7 +90,7 @@ def postFiles( basePath ):
 
 	if len(nameFiles):
 		moveFile = nameFiles[0]
-		logger.info("Posting %s" % (moveFile,))
+		logger.info("Posting: %s" % (moveFile,))
 
 		moveFiles = filter(lambda x: x[0] == moveFile, allFiles)
 
@@ -92,7 +99,7 @@ def postFiles( basePath ):
 		for file in moveFiles:
 			src = os.path.join(srcDir, file)
 			dist = os.path.join(basePath, file)
-			logger.info( "Queuing %s" % (src,))
+			logger.info( "Queuing: %s" % (src,))
 			copyQueue.put( (src, dist) )
 
 def pruneFiles( basePath ):
@@ -253,7 +260,6 @@ copyQueue = Queue.Queue()
 logger.debug( "Queue object created." )
 
 copyThread = threading.Thread( target=copyQueuedFiles )
-copyThread.daemon = True  #  Need this???
 copyThread.start()
 
 cutofftime = time.time() - (3600 * 24 * daysback) - 240  # fudge factor
@@ -299,7 +305,9 @@ logger.info( "Writing future data to: %s" % ( jsonFile, ) )
 #pprint.pprint(future)
 
 file( os.path.join( options.rootDir, jsonFile ), "w" ).write( json.dumps( future ) )
-logger.info( "Copy queue size is: %i" % ( copyQueue.qsize(), ) )
+logger.debug( "Copy queue size is: %i" % ( copyQueue.qsize(), ) )
+logger.debug( "Adding empty control item to queue." )
+copyQueue.put( ( "", "" ) )
 logger.info( "Blocking until copy queue is done" )
 copyQueue.join()
 
