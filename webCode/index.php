@@ -102,8 +102,12 @@ foreach ($afiles as $d) {
 	$filename = implode("/", $f );
 	
 	print "<item>".($itemFormat ? "\n\t" : "");
+	print( ini_get("default_charset") );
 	print "<pubDate>$pubdate</pubDate>".($itemFormat ? "\n\t" : "");
-	print "<title>".htmlentities($title)."</title>".($itemFormat ? "\n\t" : "");
+
+	print "<title>".
+			htmlspecialchars($title, ENT_COMPAT | ENT_HTML401, 'UTF-8').
+			"</title>".($itemFormat ? "\n\t" : "");
 	print "<link>$linkpre".$filename."</link>".($itemFormat ?  "\n\t" : "");
 	print "<description>$desc</description>".($itemFormat ? "\n\t" : "");
 	print "<guid>$linkpre".$filename."</guid>".($itemFormat ? "\n\t" : "");
