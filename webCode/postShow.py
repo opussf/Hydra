@@ -121,25 +121,34 @@ def pruneFiles( basePath ):
 
 	# join the filenames back together
 	testFiles = map(lambda x: os.extsep.join(x), testFiles) 
-	testFiles.sort()
+	
+	# join with timestamps of the file
+	# [( 37342, "file")]
+	timestamped = map( lambda x: (os.lstat(os.path.join(basePath,x)).st_mtime, x), testFiles )
 
-	for f in testFiles:
-		thisfile = os.path.join( basePath, f )
-		mtime = os.lstat(thisfile).st_mtime
-		diftime = datetime.datetime.fromtimestamp(mtime) - datetime.datetime.fromtimestamp(cutofftime)
-		logger.debug("Testing: (%s) %s" % (diftime, f))
-		if (mtime < cutofftime):
+	# filter the list down to those within the pruneReportAge
+	timestamped = filter( lambda x: x[0] - cutofftime < pruneReportAge, timestamped )
+	timestamped.sort()
+
+	logger.debug( "Old files to report on: %i" % (len(timestamped),) )
+
+	# walk through this list, report / delete
+	cutoffDT = datetime.datetime.fromtimestamp( cutofftime )
+	for f in timestamped:
+		thisfile = os.path.join( basePath, f[1] )
+		diftime = datetime.datetime.fromtimestamp(f[0]) - cutoffDT
+		if( f[0] < cutofftime ):
 			try:
-				logger.debug("Delete: %s" % (thisfile,))
+				logger.debug( "Delete: %s" % ( thisfile, ) )
 				if not dryrun:
-					logger.info("Deleted <--- %s" % (f,))
-					os.remove(thisfile)
+					logger.info( "Deleted <--- %s" % ( f[1], ) )
+					os.remove( thisfile )
 				else:
-					logger.info("Deleting (dryrun): %s" % (f,))
+					logger.info( "Deleting (dryrun): %s" % ( f[1], ) )
 			except OSError, (errno, strerror):
 				logger.error("OSError(%s): %s" % (errno, strerror))
-		elif (mtime - cutofftime < 7*24*3600):
-			logger.info("Remove: %s in %s" % ( f, diftime) )
+		elif( f[0] - cutofftime < pruneReportAge ):
+			logger.info("Remove: in %23s: %s" % ( diftime, f[1] ) )
 
 def warnFiles( basePath ):
 	logger.debug("Warn started for %s" % (basePath,) )
@@ -264,6 +273,12 @@ logger.debug( "Queue object created." )
 
 copyThread = threading.Thread( target=copyQueuedFiles )
 copyThread.start()
+
+
+# pruneReportAge controls how far into the future 
+# to start reporting when a file is about to be
+# removed. In seconds
+pruneReportAge = 7*24*3600
 
 cutofftime = time.time() - (3600 * 24 * daysback) - 240  # fudge factor
 cutofftime = time.time() - (3600 * 24 * daysback) + 240
