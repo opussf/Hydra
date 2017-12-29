@@ -40,7 +40,7 @@ def copyQueuedFiles():
 			copyQueue.task_done()
 			break
 
-		logger.info( "Processing: %s" % ( src, ) )
+		logger.info( "Process: %s" % ( src, ) )
 		logger.debug( "Path to check diskfree: %s" % ( os.path.dirname( dist ) ) )
 		st = os.statvfs( os.path.dirname( dist ) )
 		diskFree = st.f_bavail * st.f_frsize
@@ -157,11 +157,14 @@ def warnFiles( basePath ):
 	toPostFiles = filter( lambda x: x[-1] in validTypes, toPostFiles )
 	toPostFiles = len( toPostFiles )
 
-	logger.info( "Media files: %2i posted, %2i queued." % (postedFiles, toPostFiles) )
-	if postedFiles == 0:
-		logger.warning( "NO FILES CURRENTLY POSTED")
-	if toPostFiles <= 5:
-		logger.warning( "THE QUEUE IS %s" % (toPostFiles == 0 and "EMPTY" or "SMALL") )
+	infoLine = "Status: %3i posted, %3i queued." % ( postedFiles, toPostFiles )
+	warningLine = ( postedFiles == 0 and "NO FILES CURRENTLY POSTED. " or "" ) + \
+			( toPostFiles <= 5 and "THE QUEUE IS %s" % ( toPostFiles == 0 and "EMPTY" or "SMALL" ) or "" )
+
+	if warningLine and len( warningLine ) > 0:
+		logger.warning( "%s %s" % ( infoLine, warningLine ) )
+	else:
+		logger.info( "%s" % ( infoLine, ) )	
 
 def futureFiles( basePath, daysInFuture=30 ):
 	"""Write what is expected to be posted in the future, to a json file
