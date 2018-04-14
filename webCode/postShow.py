@@ -137,6 +137,7 @@ def pruneFiles( basePath ):
 	for f in timestamped:
 		thisfile = os.path.join( basePath, f[1] )
 		diftime = datetime.datetime.fromtimestamp(f[0]) - cutoffDT
+		diftimeStr = "%s" % (diftime,)
 		if( f[0] < cutofftime ):
 			try:
 				logger.debug( "Delete: %s" % ( thisfile, ) )
@@ -148,9 +149,10 @@ def pruneFiles( basePath ):
 			except OSError, (errno, strerror):
 				logger.error("OSError(%s): %s" % (errno, strerror))
 		elif( f[0] - cutofftime < pruneReportAge ):
-			logger.info("Remove: in %23s: %s" % ( diftime, f[1] ) )
+			logger.info("Remove: in %16s: %s" % ( diftimeStr[:-7], f[1] ) )
 
 def warnFiles( basePath ):
+	# return posted, queued files
 	logger.debug("Warn started for %s" % (basePath,) )
 	postedFiles = os.listdir(basePath)
 	postedFiles = filter(lambda x: not os.path.isdir(x), postedFiles )
@@ -170,10 +172,11 @@ def warnFiles( basePath ):
 	warningLine = ( postedFiles == 0 and "NO FILES CURRENTLY POSTED. " or "" ) + \
 			( toPostFiles <= 5 and "THE QUEUE IS %s" % ( toPostFiles == 0 and "EMPTY" or "SMALL" ) or "" )
 
-	if warningLine and len( warningLine ) > 0:
+	if ( postedFiles + toPostFiles <= 5 ):
 		logger.warning( "%s %s" % ( infoLine, warningLine ) )
 	else:
-		logger.info( "%s" % ( infoLine, ) )
+		logger.info( "%s %s" % ( infoLine, warningLine ) )
+	return( ( postedFiles, toPostFiles ) )
 
 def futureFiles( basePath, daysInFuture=30 ):
 	"""Write what is expected to be posted in the future, to a json file
@@ -203,6 +206,7 @@ def futureFiles( basePath, daysInFuture=30 ):
 	if os.path.exists( os.path.join( basePath, cronFile ) ):
 		logger.debug( "Found cron file" )
 		cronLines = open( os.path.join( basePath, cronFile ), "r" ).readlines()
+		cronLines = map( lambda x: x.strip(), cronLines )
 
 		baseTime=datetime.datetime.now()
 
@@ -212,11 +216,16 @@ def futureFiles( basePath, daysInFuture=30 ):
 				line = line.strip()
 				logger.debug( "Parse %s" % ( line, ) )
 
-				cronCheck.set_value(line)
-				nextTime = cronCheck.next_run(baseTime)
+				try:
+					cronCheck.set_value(line)
+					nextTime = cronCheck.next_run(baseTime)
+					minTimes.append( nextTime )
+				except ValueError:
+					logger.error( "Remove bad cron `%s`" % ( line, ) )
+					cronLines.remove( line )
+
 				#if nextTime < baseTime:
 				#	nextTime += datetime.timedelta( days=31 )
-				minTimes.append( nextTime )
 
 			postTime = min( minTimes ) # next post time is the min val of the list
 
@@ -290,6 +299,7 @@ future = {}
 
 # init the cronCheck object
 cronCheck = crontab_parser.SimpleCrontabEntry()
+totalPosted, totalQueued = 0, 0
 
 for root, dirs, files in os.walk( options.rootDir ):
 	dirs.sort( reverse=False )
@@ -304,7 +314,7 @@ for root, dirs, files in os.walk( options.rootDir ):
 					logger.debug(">%s< is being checked" % line)
 					cronCheck.set_value(line)
 				except:
-					logger.warning("%s invalid cron syntax, ignoring" % line)
+					logger.error("%s invalid cron syntax, ignoring" % line)
 					continue
 				if cronCheck.matches():
 					logger.debug("\tMatched")
@@ -314,10 +324,14 @@ for root, dirs, files in os.walk( options.rootDir ):
 					logger.debug("Next run at: %s" % (cronCheck.next_run(),))
 
 		pruneFiles(root) # Always try to prune files
-		warnFiles(root) # generate any warnings
+		posted, queued = warnFiles(root) # generate any warnings
 		future[show]=futureFiles(root) # add future files to json structure
+		totalPosted = totalPosted + posted
+		totalQueued = totalQueued + queued
 
 logger.info( "Writing future data to: %s" % ( jsonFile, ) )
+logger.info( "Totals: %4i posted, %4i queued, %5i total." %
+		( totalPosted, totalQueued, totalPosted + totalQueued ) )
 
 #import pprint
 #pprint.pprint(future)
