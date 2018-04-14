@@ -98,3 +98,69 @@ The photo in the feed is one of those items.
 
 There are also some things I'm sort of working on here and there.
 This is mostly fun for now.
+
+# Media Server
+192.168.1.67
+
+Implement the RTSP v2.0 https://tools.ietf.org/html/rfc7826
+
+RTSP and RTSPS
+
+RTSP = port 554
+RTSPS= port 322
+Alternate port: 8554
+port: 1755?
+
+
+UPnP / DLNA server  (Digital Living Network Alliance)
+
+UDP port: 1900
+
+https://github.com/ps3mediaserver/ps3mediaserver/blob/master/src/main/external-resources/documentation/networking.html
+https://spirespark.com/dlna/guidelines
+https://www.rfc3092.net/category/dlna/
+https://www.google.com/search?q=media+server+protocol&ie=utf-8&oe=utf-8
+
+https://wiki.python.org/moin/UdpCommunication
+
+http://www.svlconnectsdk.com/download
+
+https://openconnectivity.org/developer/specifications/upnp-resources/upnp
+https://en.wikipedia.org/wiki/Universal_Plug_and_Play#UPnP_AV_standards
+
+Multicast:
+Seems that this needs to be found via multicast discovery.
+How to enable that?
+
+https://en.wikipedia.org/wiki/Multicast_Source_Discovery_Protocol
+https://tools.ietf.org/html/rfc3618
+https://tools.ietf.org/html/rfc4611
+
+
+https://tools.ietf.org/html/rfc2616
+
+
+https://tools.ietf.org/html/rfc4601
+ Hello messages MUST be sent on all active interfaces, including
+   physical point-to-point links, and are multicast to the 'ALL-PIM-
+   ROUTERS' group address ('224.0.0.13' for IPv4 and 'ff02::d' for
+   IPv6).
+
+
+
+
+https://en.wikipedia.org/wiki/Multiprotocol_BGP
+https://tools.ietf.org/html/rfc4760
+
+https://stackoverflow.com/questions/21089268/python-service-discovery-advertise-a-service-across-a-local-network
+https://pymotw.com/2/socket/multicast.html
+https://pypi.python.org/pypi/zeroconf
+
+
+http://www.ietf.org/rfc/rfc2710.txt
+https://tools.ietf.org/html/rfc2710
+
+
+
+(239.255.255.250:1900)
+
