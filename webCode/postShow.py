@@ -58,7 +58,7 @@ def copyQueuedFiles():
 			else:
 				time.sleep( 2.2 )
 			end = timeit.default_timer()
-			movedMessages.append( "Moved%s (in %00.03fs) ---> %s" % 
+			movedMessages.append( "Moved%s (in %00.03fs) ---> %s" %
 					( dryrun and " (dryrun)" or "", end-start, dist ) )
 		else:
 			logger.error( "Diskfree: %i < Filesize: %i. Not enough space to post file." %
@@ -78,7 +78,7 @@ def postFiles( basePath ):
 	allFiles = map(lambda x: [x[0], x[1], os.lstat(os.path.join(srcDir, os.extsep.join(x))).st_mtime], allFiles)
 	allFiles = sorted(allFiles, key=lambda k: k[2]) # sort the files by modtime
 	allFiles = map(lambda x: x[:-1], allFiles) #remove the modtime element
-	
+
 	# files that match the expected extension
 	validFiles = filter(lambda x: x[-1] in validTypes, allFiles)
 	logger.debug("Valid File count: %i" % (len(validFiles),) )
@@ -120,8 +120,8 @@ def pruneFiles( basePath ):
 	testFiles = filter(lambda x: x[0] in nameFiles, pruneFiles)
 
 	# join the filenames back together
-	testFiles = map(lambda x: os.extsep.join(x), testFiles) 
-	
+	testFiles = map(lambda x: os.extsep.join(x), testFiles)
+
 	# join with timestamps of the file
 	# [( 37342, "file")]
 	timestamped = map( lambda x: (os.lstat(os.path.join(basePath,x)).st_mtime, x), testFiles )
@@ -173,7 +173,7 @@ def warnFiles( basePath ):
 	if warningLine and len( warningLine ) > 0:
 		logger.warning( "%s %s" % ( infoLine, warningLine ) )
 	else:
-		logger.info( "%s" % ( infoLine, ) )	
+		logger.info( "%s" % ( infoLine, ) )
 
 def futureFiles( basePath, daysInFuture=30 ):
 	"""Write what is expected to be posted in the future, to a json file
@@ -211,7 +211,7 @@ def futureFiles( basePath, daysInFuture=30 ):
 			for line in cronLines:
 				line = line.strip()
 				logger.debug( "Parse %s" % ( line, ) )
-				
+
 				cronCheck.set_value(line)
 				nextTime = cronCheck.next_run(baseTime)
 				#if nextTime < baseTime:
@@ -219,11 +219,11 @@ def futureFiles( basePath, daysInFuture=30 ):
 				minTimes.append( nextTime )
 
 			postTime = min( minTimes ) # next post time is the min val of the list
-				
+
 			returnList.append( [fileName, "%s" % ((postTime.strftime("%s"),)), "desc", "%s" % (postTime,)] ) # fix this by finding the file and the desc file
 			baseTime = postTime + datetime.timedelta( hours=1 ) # add an hour to the post time, since it is run once an hour
 
-			logger.debug( "%s (%s) %s" % (postTime, baseTime, fileName) )  # print for debugging 
+			logger.debug( "%s (%s) %s" % (postTime, baseTime, fileName) )  # print for debugging
 
 	return returnList
 
@@ -275,7 +275,7 @@ copyThread = threading.Thread( target=copyQueuedFiles )
 copyThread.start()
 
 
-# pruneReportAge controls how far into the future 
+# pruneReportAge controls how far into the future
 # to start reporting when a file is about to be
 # removed. In seconds
 pruneReportAge = 7*24*3600
