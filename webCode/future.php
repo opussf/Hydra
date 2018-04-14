@@ -22,7 +22,7 @@ $divStyle = sprintf("width: %spx; height: %spx", $graphSizes[$size]["x"], $graph
 # I want a structure that is [day, count]
 
 $data = array();
-foreach ( $futureData as $show => $showdata ) {
+foreach ( $futureData as $channel => $showdata ) {
 	#print( $show . "<br/>" );
 	foreach( $showdata as $shows ) {
 		#print(sprintf("%s %s %s<br/>", $shows[1], date("Y-m-d\tH:i:s", $shows[1]), $shows[0]));
@@ -31,21 +31,28 @@ foreach ( $futureData as $show => $showdata ) {
 		$jsonDate = sprintf("(%s, %s, %s)", $year, $month, $day);
 		$key = date("Y-m-d", $shows[1]);
 		$dateStr = date("D, Y-m-d", $shows[1]);
+		$hourStr = date("H", $shows[1]);
 	
 		#print($key . "<br/>");
 		if (array_key_exists($key, $data)) {
-			$data[$key][1] += 1;
-			$data[$key][2] .= "<br/>" . $shows[0];
+			$data[$key]["count"] += 1;
+			$data[$key]["showList"] .= "<br/>" . $shows[0];
 		} else {
 			#var_dump( array( 1, $shows[0] ) );
-			$data[$key] = array( 0 => $jsonDate, 1 => 1, 2 => $shows[0], 3 => $dateStr );
+			$data[$key] = array( 
+			"jsonDate" => $jsonDate, 
+			"count" => 1, 
+			"showList" => $shows[0], 
+			"displayDate" => $dateStr,
+			"hourList" => array(),
+			);
 		}
+		$data[$key]["hourList"][$hourStr][$channel][] = $shows[0];
 	}
 }
 
 ksort( $data );
 #var_dump($data);
-
 
 ?>
 <html>
@@ -66,7 +73,7 @@ function drawChart() {
 	$googleData = array();
 	foreach( $data as $date => $struct ) {
 		array_push($googleData, sprintf("[new Date%s, %s]",
-				$struct[0], $struct[1]
+				$struct["jsonDate"], $struct["count"]
 		));
 	}
 	print_r(implode(",\n", $googleData)."\n");
@@ -88,11 +95,74 @@ function drawChart() {
 		<div id="chart_div" style="<?=$divStyle ?>"></div> 
 	<table border=1>
 <?php
+# get the first data
+	foreach( $data as $date => $struct ) {
+		$tsStart = strtoTime( $date );
+	
+		$dowPrev = date( "w", $tsDisplay );
+		break;
+	}
+# get then end date
+	end( $data );
+	$tsEnd = strtoTime( key($data) ) + 86400;
+	reset( $data );
+# work through the days
+	$itemCount = 0;
+
+	for( $ts = $tsStart; $ts <= $tsEnd; $ts += 86400 ) {
+		$dateKey = date("Y-m-d", $ts );
+		if( $itemCount % 7 == 0 ) {
+			print("<tr>");
+		}
+
+		print("<td style='vertical-align:top'>");
+
+		$struct = $data[$dateKey];
+		if( ! is_null( $struct ) ) {
+			print( "\n<table border=1>");
+			print( sprintf( "<tr><td colspan=3>%s</td></tr>", $struct["displayDate"] ) );
+			ksort( $struct["hourList"] );
+			foreach( $struct["hourList"] as $hour => $channels ) {
+				$showCount = 0;
+				$numShows = count( $channels );
+				ksort( $channels );
+				print("<tr>");
+				print( sprintf( "<td rowspan=%s>%s</td>", $numShows, $hour ) );
+				
+				foreach( $channels as $channel => $showInfo ) {
+					if( $showCount > 0 ) {
+						print( "<tr>" );
+					}
+					print( sprintf( "<td>%s</td><td>%s</td></tr>",
+						$channel,
+						wordwrap( $showInfo[0], 8, "<br/>", true ) ) );
+					$showCount ++;
+				}
+				
+				print("</tr>");
+		
+			}
+
+			#var_dump($struct);
+			print("</table>");
+		}
+
+		print("</td>");
+		$itemCount++;
+		if ($itemCount % 7 == 0) {
+			print("</tr>\n");
+		}
+		#if (array_key_exists($key, $data)) {
+		
+	}
+
+#original
+/*
 	foreach( $data as $date => $struct ) {
 		print(sprintf("<tr><td>%s</td><td>%s</td></tr>\n",
-				$struct[3], $struct[2]));
+				$struct["displayDate"], $struct["showList"]));
 	}
-		
+*/
 ?>
 	</table>
 	</body>

@@ -40,7 +40,7 @@ def copyQueuedFiles():
 			copyQueue.task_done()
 			break
 
-		logger.info( "Processing: %s" % ( src, ) )
+		logger.info( "Process: %s" % ( src, ) )
 		logger.debug( "Path to check diskfree: %s" % ( os.path.dirname( dist ) ) )
 		st = os.statvfs( os.path.dirname( dist ) )
 		diskFree = st.f_bavail * st.f_frsize
@@ -58,7 +58,7 @@ def copyQueuedFiles():
 			else:
 				time.sleep( 2.2 )
 			end = timeit.default_timer()
-			movedMessages.append( "Moved%s (in %00.03fs) ---> %s" % 
+			movedMessages.append( "Moved%s (in %00.03fs) ---> %s" %
 					( dryrun and " (dryrun)" or "", end-start, dist ) )
 		else:
 			logger.error( "Diskfree: %i < Filesize: %i. Not enough space to post file." %
@@ -78,7 +78,7 @@ def postFiles( basePath ):
 	allFiles = map(lambda x: [x[0], x[1], os.lstat(os.path.join(srcDir, os.extsep.join(x))).st_mtime], allFiles)
 	allFiles = sorted(allFiles, key=lambda k: k[2]) # sort the files by modtime
 	allFiles = map(lambda x: x[:-1], allFiles) #remove the modtime element
-	
+
 	# files that match the expected extension
 	validFiles = filter(lambda x: x[-1] in validTypes, allFiles)
 	logger.debug("Valid File count: %i" % (len(validFiles),) )
@@ -120,28 +120,39 @@ def pruneFiles( basePath ):
 	testFiles = filter(lambda x: x[0] in nameFiles, pruneFiles)
 
 	# join the filenames back together
-	testFiles = map(lambda x: os.extsep.join(x), testFiles) 
-	testFiles.sort()
+	testFiles = map(lambda x: os.extsep.join(x), testFiles)
 
-	for f in testFiles:
-		thisfile = os.path.join( basePath, f )
-		mtime = os.lstat(thisfile).st_mtime
-		diftime = datetime.datetime.fromtimestamp(mtime) - datetime.datetime.fromtimestamp(cutofftime)
-		logger.debug("Testing: (%s) %s" % (diftime, f))
-		if (mtime < cutofftime):
+	# join with timestamps of the file
+	# [( 37342, "file")]
+	timestamped = map( lambda x: (os.lstat(os.path.join(basePath,x)).st_mtime, x), testFiles )
+
+	# filter the list down to those within the pruneReportAge
+	timestamped = filter( lambda x: x[0] - cutofftime < pruneReportAge, timestamped )
+	timestamped.sort()
+
+	logger.debug( "Old files to report on: %i" % (len(timestamped),) )
+
+	# walk through this list, report / delete
+	cutoffDT = datetime.datetime.fromtimestamp( cutofftime )
+	for f in timestamped:
+		thisfile = os.path.join( basePath, f[1] )
+		diftime = datetime.datetime.fromtimestamp(f[0]) - cutoffDT
+		diftimeStr = "%s" % (diftime,)
+		if( f[0] < cutofftime ):
 			try:
-				logger.debug("Delete: %s" % (thisfile,))
+				logger.debug( "Delete: %s" % ( thisfile, ) )
 				if not dryrun:
-					logger.info("Deleted <--- %s" % (f,))
-					os.remove(thisfile)
+					logger.info( "Deleted <--- %s" % ( f[1], ) )
+					os.remove( thisfile )
 				else:
-					logger.info("Deleting (dryrun): %s" % (f,))
+					logger.info( "Deleting (dryrun): %s" % ( f[1], ) )
 			except OSError, (errno, strerror):
 				logger.error("OSError(%s): %s" % (errno, strerror))
-		elif (mtime - cutofftime < 7*24*3600):
-			logger.info("Remove: %s in %s" % ( f, diftime) )
+		elif( f[0] - cutofftime < pruneReportAge ):
+			logger.info("Remove: in %16s: %s" % ( diftimeStr[:-7], f[1] ) )
 
 def warnFiles( basePath ):
+	# return posted, queued files
 	logger.debug("Warn started for %s" % (basePath,) )
 	postedFiles = os.listdir(basePath)
 	postedFiles = filter(lambda x: not os.path.isdir(x), postedFiles )
@@ -157,11 +168,15 @@ def warnFiles( basePath ):
 	toPostFiles = filter( lambda x: x[-1] in validTypes, toPostFiles )
 	toPostFiles = len( toPostFiles )
 
-	logger.info( "Media files: %2i posted, %2i queued." % (postedFiles, toPostFiles) )
-	if postedFiles == 0:
-		logger.warning( "NO FILES CURRENTLY POSTED")
-	if toPostFiles <= 5:
-		logger.warning( "THE QUEUE IS %s" % (toPostFiles == 0 and "EMPTY" or "SMALL") )
+	infoLine = "Status: %3i posted, %3i queued." % ( postedFiles, toPostFiles )
+	warningLine = ( postedFiles == 0 and "NO FILES CURRENTLY POSTED. " or "" ) + \
+			( toPostFiles <= 5 and "THE QUEUE IS %s" % ( toPostFiles == 0 and "EMPTY" or "SMALL" ) or "" )
+
+	if ( postedFiles + toPostFiles <= 5 ):
+		logger.warning( "%s %s" % ( infoLine, warningLine ) )
+	else:
+		logger.info( "%s %s" % ( infoLine, warningLine ) )
+	return( ( postedFiles, toPostFiles ) )
 
 def futureFiles( basePath, daysInFuture=30 ):
 	"""Write what is expected to be posted in the future, to a json file
@@ -191,6 +206,7 @@ def futureFiles( basePath, daysInFuture=30 ):
 	if os.path.exists( os.path.join( basePath, cronFile ) ):
 		logger.debug( "Found cron file" )
 		cronLines = open( os.path.join( basePath, cronFile ), "r" ).readlines()
+		cronLines = map( lambda x: x.strip(), cronLines )
 
 		baseTime=datetime.datetime.now()
 
@@ -199,19 +215,24 @@ def futureFiles( basePath, daysInFuture=30 ):
 			for line in cronLines:
 				line = line.strip()
 				logger.debug( "Parse %s" % ( line, ) )
-				
-				cronCheck.set_value(line)
-				nextTime = cronCheck.next_run(baseTime)
+
+				try:
+					cronCheck.set_value(line)
+					nextTime = cronCheck.next_run(baseTime)
+					minTimes.append( nextTime )
+				except ValueError:
+					logger.error( "Remove bad cron `%s`" % ( line, ) )
+					cronLines.remove( line )
+
 				#if nextTime < baseTime:
 				#	nextTime += datetime.timedelta( days=31 )
-				minTimes.append( nextTime )
 
 			postTime = min( minTimes ) # next post time is the min val of the list
-				
+
 			returnList.append( [fileName, "%s" % ((postTime.strftime("%s"),)), "desc", "%s" % (postTime,)] ) # fix this by finding the file and the desc file
 			baseTime = postTime + datetime.timedelta( hours=1 ) # add an hour to the post time, since it is run once an hour
 
-			logger.debug( "%s (%s) %s" % (postTime, baseTime, fileName) )  # print for debugging 
+			logger.debug( "%s (%s) %s" % (postTime, baseTime, fileName) )  # print for debugging
 
 	return returnList
 
@@ -262,6 +283,12 @@ logger.debug( "Queue object created." )
 copyThread = threading.Thread( target=copyQueuedFiles )
 copyThread.start()
 
+
+# pruneReportAge controls how far into the future
+# to start reporting when a file is about to be
+# removed. In seconds
+pruneReportAge = 7*24*3600
+
 cutofftime = time.time() - (3600 * 24 * daysback) - 240  # fudge factor
 cutofftime = time.time() - (3600 * 24 * daysback) + 240
 logger.debug("Cutoff Time %s" % time.ctime(cutofftime) )
@@ -272,6 +299,7 @@ future = {}
 
 # init the cronCheck object
 cronCheck = crontab_parser.SimpleCrontabEntry()
+totalPosted, totalQueued = 0, 0
 
 for root, dirs, files in os.walk( options.rootDir ):
 	dirs.sort( reverse=False )
@@ -286,7 +314,7 @@ for root, dirs, files in os.walk( options.rootDir ):
 					logger.debug(">%s< is being checked" % line)
 					cronCheck.set_value(line)
 				except:
-					logger.warning("%s invalid cron syntax, ignoring" % line)
+					logger.error("%s invalid cron syntax, ignoring" % line)
 					continue
 				if cronCheck.matches():
 					logger.debug("\tMatched")
@@ -296,10 +324,14 @@ for root, dirs, files in os.walk( options.rootDir ):
 					logger.debug("Next run at: %s" % (cronCheck.next_run(),))
 
 		pruneFiles(root) # Always try to prune files
-		warnFiles(root) # generate any warnings
+		posted, queued = warnFiles(root) # generate any warnings
 		future[show]=futureFiles(root) # add future files to json structure
+		totalPosted = totalPosted + posted
+		totalQueued = totalQueued + queued
 
 logger.info( "Writing future data to: %s" % ( jsonFile, ) )
+logger.info( "Totals: %4i posted, %4i queued, %5i total." %
+		( totalPosted, totalQueued, totalPosted + totalQueued ) )
 
 #import pprint
 #pprint.pprint(future)
